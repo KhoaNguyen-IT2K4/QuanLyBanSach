@@ -17,6 +17,7 @@
 * **Kiến trúc:** 3-Layer (DAL, BUS, GUI) kết hợp Singleton Pattern DataProvider.
 
 ## Hướng dẫn chạy dự án
+* **Clone dự án:** Mở `CMD` gõ lệnh `git clone https://github.com/KhoaNguyen-IT2K4/QuanLyBanSach.git`.
 * **Database:** Vào thư mục Database, chạy script `BookStores.sql` trong SQL Server.
 * **Chạy:** Mở file `.sln` bằng Visual Studio và nhấn `F5`.
 
