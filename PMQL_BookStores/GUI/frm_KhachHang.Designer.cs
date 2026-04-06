@@ -163,11 +163,10 @@
             this.dtpNgaySinhKH.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.dtpNgaySinhKH.Format = System.Windows.Forms.DateTimePickerFormat.Custom;
             this.dtpNgaySinhKH.Location = new System.Drawing.Point(506, 48);
-            this.dtpNgaySinhKH.MaxDate = new System.DateTime(2024, 12, 31, 0, 0, 0, 0);
-            this.dtpNgaySinhKH.MinDate = new System.DateTime(2000, 1, 1, 0, 0, 0, 0);
             this.dtpNgaySinhKH.Name = "dtpNgaySinhKH";
             this.dtpNgaySinhKH.Size = new System.Drawing.Size(181, 27);
             this.dtpNgaySinhKH.TabIndex = 9;
+            this.dtpNgaySinhKH.Value = new System.DateTime(2024, 12, 31, 0, 0, 0, 0);
             // 
             // lblNgaySinhKH
             // 

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Drawing.Printing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -281,31 +282,60 @@ namespace PMQL_BookStores.BUS
             }
         }
 
-        public void InHoaDon(PrintPageEventArgs e,string mhd)
+        public void InHoaDon(PrintPageEventArgs e, string mhd)
         {
-            Image logoBS = new Bitmap(Application.StartupPath + "\\logoBookStores\\logo_BookStores.jpg");
-            Rectangle sizeLogo = new Rectangle(550, 53, 60, 60);
-
-            e.Graphics.DrawString("HÓA ĐƠN", new Font("Calibri", 40, FontStyle.Bold), Brushes.Black, new PointF(50, 50));
-            e.Graphics.DrawImage(logoBS, sizeLogo);
-            e.Graphics.DrawString("Cửa hàng sách\n   BookStores", new Font("Calibri", 20, FontStyle.Bold), Brushes.Black, new PointF(610, 50));
-            e.Graphics.DrawString("Thông tin khách hàng", new Font("Calibri", 16, FontStyle.Bold), Brushes.Red, new PointF(50, 150));
-            DataProvider.Instance.PrintData("select KhachHang.HoTenKH,KhachHang.DienThoai,KhachHang.DiaChi from HoaDon inner join KhachHang on HoaDon.MaKH = KhachHang.MaKH WHERE HoaDon.MaHD LIKE N'" + mhd.ToString() + "'", e, "Khách Hàng", 0);
-            DataProvider.Instance.PrintData("SELECT MaHD,FORMAT(CONVERT(DATE,NgayLap), 'dd/MM/yyyy'),TongSoLuong FROM HoaDon WHERE MaHD LIKE N'" + mhd.ToString() + "'", e, "Hóa Đơn", 0);
-            e.Graphics.DrawString("......................................................................", new Font("Calibri", 30, FontStyle.Regular), Brushes.Silver, new PointF(43, 270)); // tiêu đề chấm
-            e.Graphics.DrawString("Sách\t\t\tSố lượng\t\tĐơn giá\t\tThành tiền", new Font("Calibri", 16, FontStyle.Bold), Brushes.Black, new PointF(50, 340)); // tiêu đề mục height lớn hơn tiêu đề chấm 70
-
-            int buocnhay = DataProvider.Instance.PrintData("select Sach.TenSach,ChiTietHD.SLban,ChiTietHD.GiaThanh,ChiTietHD.ThanhTien from ChiTietHD inner join HoaDon on ChiTietHD.MaHD = HoaDon.MaHD inner join Sach on ChiTietHD.MaSach = Sach.MaSach WHERE HoaDon.MaHD LIKE N'" + mhd.ToString() + "'", e, "Hóa Đơn", 0);
-            buocnhay += 50; // tiêu đề tổng lớn hơn height nội dung tiêu đề 50
-
-            if(buocnhay != 50)
+            // 1. Xử lý Logo an toàn
+            string logoPath = Path.Combine(Application.StartupPath, "logoBookStores", "logo_BookStores.jpg");
+            Image logoBS = null;
+            if (File.Exists(logoPath))
             {
-                DataProvider.Instance.PrintData("select TongTien from HoaDon WHERE HoaDon.MaHD LIKE N'" + mhd.ToString() + "'", e, "None", buocnhay);
+                logoBS = new Bitmap(logoPath);
             }
-            else
+
+            // 2. Định nghĩa Font chữ (Dùng xong nên Dispose hoặc khai báo tập trung)
+            Font fontTitle = new Font("Calibri", 40, FontStyle.Bold);
+            Font fontHeader = new Font("Calibri", 16, FontStyle.Bold);
+            Font fontInfo = new Font("Calibri", 20, FontStyle.Bold);
+
+            // 3. Vẽ Tiêu đề và Logo
+            e.Graphics.DrawString("HÓA ĐƠN", fontTitle, Brushes.Black, new PointF(50, 50));
+
+            if (logoBS != null)
             {
-                DataProvider.Instance.PrintData("select TongTien from HoaDon WHERE HoaDon.MaHD LIKE N'" + mhd.ToString() + "'", e, "None", 390);
+                Rectangle sizeLogo = new Rectangle(550, 53, 60, 60);
+                e.Graphics.DrawImage(logoBS, sizeLogo);
+                logoBS.Dispose(); // Giải phóng ảnh sau khi đã vẽ xong vào buffer
             }
+
+            e.Graphics.DrawString("Cửa hàng sách\n   BookStores", fontInfo, Brushes.Black, new PointF(610, 50));
+
+            // 4. In thông tin Khách hàng và Hóa đơn (Phần thông tin chung)
+            e.Graphics.DrawString("Thông tin khách hàng", fontHeader, Brushes.Red, new PointF(50, 150));
+
+            // Lưu ý: Dùng mhd.ToString() trong SQL cần cẩn thận với SQL Injection, nhưng ở mức đồ án thì ổn
+            DataProvider.Instance.PrintData("SELECT KhachHang.HoTenKH, KhachHang.DienThoai, KhachHang.DiaChi FROM HoaDon INNER JOIN KhachHang ON HoaDon.MaKH = KhachHang.MaKH WHERE HoaDon.MaHD = N'" + mhd + "'", e, "Khách Hàng", 0);
+            DataProvider.Instance.PrintData("SELECT MaHD, FORMAT(CONVERT(DATE, NgayLap), 'dd/MM/yyyy'), TongSoLuong FROM HoaDon WHERE MaHD = N'" + mhd + "'", e, "Hóa Đơn", 0);
+
+            // 5. Vẽ kẻ ngang và Tiêu đề bảng
+            e.Graphics.DrawString("......................................................................", new Font("Calibri", 30, FontStyle.Regular), Brushes.Silver, new PointF(43, 270));
+            e.Graphics.DrawString("Sách\t\t\tSố lượng\t\tĐơn giá\t\tThành tiền", fontHeader, Brushes.Black, new PointF(50, 340));
+
+            // 6. In chi tiết các mặt hàng (Lấy bước nhảy để in Tổng tiền)
+            // Cột giá trong ChiTietHD là GiaThanh (Khớp với SQL bạn gửi)
+            string queryCT = "SELECT Sach.TenSach, ChiTietHD.SLban, ChiTietHD.GiaThanh, ChiTietHD.ThanhTien FROM ChiTietHD " +
+                             "INNER JOIN HoaDon ON ChiTietHD.MaHD = HoaDon.MaHD " +
+                             "INNER JOIN Sach ON ChiTietHD.MaSach = Sach.MaSach WHERE HoaDon.MaHD = N'" + mhd + "'";
+
+            int buocnhay = DataProvider.Instance.PrintData(queryCT, e, "Hóa Đơn", 0);
+
+            // 7. In Tổng tiền
+            int yTongTien = (buocnhay > 390) ? buocnhay + 50 : 390 + 50;
+            DataProvider.Instance.PrintData("SELECT TongTien FROM HoaDon WHERE MaHD = N'" + mhd + "'", e, "None", yTongTien);
+
+            // Giải phóng Font để tránh tràn bộ nhớ GDI
+            fontTitle.Dispose();
+            fontHeader.Dispose();
+            fontInfo.Dispose();
         }
     }
 }

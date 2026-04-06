@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Drawing.Printing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -364,31 +365,58 @@ namespace PMQL_BookStores.BUS
             }
         }
 
-        public void InPhieuNhap(PrintPageEventArgs e,string mpn)
+        public void InPhieuNhap(PrintPageEventArgs e, string mpn)
         {
-            Image logoBS = new Bitmap(Application.StartupPath + "\\logoBookStores\\logo_BookStores.jpg");
-            Rectangle sizeLogo = new Rectangle(50, 53, 60, 60);
+            // 1. Xử lý Logo an toàn (Tránh lỗi Parameter is not valid)
+            string logoPath = Path.Combine(Application.StartupPath, "logoBookStores", "logo_BookStores.jpg");
+            Image logoBS = null;
+            if (File.Exists(logoPath))
+            {
+                logoBS = new Bitmap(logoPath);
+            }
 
+            // 2. Vẽ Tiêu đề và Logo (Bố cục Phiếu Nhập)
             e.Graphics.DrawString("Phiếu Nhập", new Font("Calibri", 40, FontStyle.Bold), Brushes.Black, new PointF(300, 160));
-            e.Graphics.DrawImage(logoBS, sizeLogo);
+
+            if (logoBS != null)
+            {
+                Rectangle sizeLogo = new Rectangle(50, 53, 60, 60);
+                e.Graphics.DrawImage(logoBS, sizeLogo);
+                logoBS.Dispose(); // Giải phóng bộ nhớ sau khi vẽ
+            }
+
             e.Graphics.DrawString("Cửa hàng sách\n   BookStores", new Font("Calibri", 20, FontStyle.Bold), Brushes.Black, new PointF(110, 50));
+
+            // 3. Thông tin Nhà cung cấp (Tọa độ Y = 270)
             e.Graphics.DrawString("Thông tin nhà cung cấp", new Font("Calibri", 16, FontStyle.Bold), Brushes.Red, new PointF(50, 270));
-            DataProvider.Instance.PrintData("SELECT NhaCungCap.TenNCC,NhaCungCap.DienThoai,NhaCungCap.DiaChi FROM PhieuNhap inner join NhaCungCap on PhieuNhap.MaNCC = NhaCungCap.MaNCC WHERE PhieuNhap.MaPN LIKE N'" + mpn.ToString() + "'", e, "Nhà Cung Cấp", 0);
-            DataProvider.Instance.PrintData("SELECT MaPN,FORMAT(CONVERT(DATE,NgayNhap), 'dd/MM/yyyy'),TongSoLuong FROM PhieuNhap WHERE MaPN LIKE N'" + mpn.ToString() + "'", e, "Phiếu Nhập", 0);
-            e.Graphics.DrawString("......................................................................", new Font("Calibri", 30, FontStyle.Regular), Brushes.Silver, new PointF(43, 380)); // tiêu đề chấm
-            e.Graphics.DrawString("Sách\t\t\tSố lượng\t\tĐơn giá\t\tThành tiền", new Font("Calibri", 16, FontStyle.Bold), Brushes.Black, new PointF(50, 450)); // tiêu đề mục height lớn hơn tiêu đề chấm 70
 
-            int buocnhay = DataProvider.Instance.PrintData("select Sach.TenSach,ChiTietPN.SLnhap,ChiTietPN.GiaThanh,ChiTietPN.ThanhTien from ChiTietPN inner join PhieuNhap on ChiTietPN.MaPN = PhieuNhap.MaPN inner join Sach on ChiTietPN.MaSach = Sach.MaSach WHERE PhieuNhap.MaPN LIKE N'" + mpn.ToString() + "'", e, "Phiếu Nhập", 0);
-            buocnhay += 50; // tiêu đề tổng lớn hơn height nội dung tiêu đề 50
+            // Truy vấn thông tin NCC
+            string sqlNCC = "SELECT NhaCungCap.TenNCC, NhaCungCap.DienThoai, NhaCungCap.DiaChi FROM PhieuNhap " +
+                            "INNER JOIN NhaCungCap ON PhieuNhap.MaNCC = NhaCungCap.MaNCC WHERE PhieuNhap.MaPN = N'" + mpn + "'";
+            DataProvider.Instance.PrintData(sqlNCC, e, "Nhà Cung Cấp", 0);
 
-            if(buocnhay != 50)
-            {
-                DataProvider.Instance.PrintData("select TongTien from PhieuNhap WHERE PhieuNhap.MaPN LIKE N'" + mpn.ToString() + "'", e, "None", buocnhay);
-            }
-            else
-            {
-                DataProvider.Instance.PrintData("select TongTien from PhieuNhap WHERE PhieuNhap.MaPN LIKE N'" + mpn.ToString() + "'", e, "None", 500);
-            }
+            // Truy vấn thông tin chung của Phiếu nhập (Số phiếu, ngày, số lượng)
+            string sqlPN = "SELECT MaPN, FORMAT(CONVERT(DATE, NgayNhap), 'dd/MM/yyyy'), TongSoLuong FROM PhieuNhap WHERE MaPN = N'" + mpn + "'";
+            DataProvider.Instance.PrintData(sqlPN, e, "Phiếu Nhập", 0);
+
+            // 4. Vẽ kẻ ngang và Tiêu đề bảng
+            e.Graphics.DrawString("......................................................................", new Font("Calibri", 30, FontStyle.Regular), Brushes.Silver, new PointF(43, 380));
+            e.Graphics.DrawString("Sách\t\t\tSố lượng\t\tĐơn giá\t\tThành tiền", new Font("Calibri", 16, FontStyle.Bold), Brushes.Black, new PointF(50, 450));
+
+            // 5. In chi tiết các mặt hàng nhập
+            // QUAN TRỌNG: Đã đổi GiaThanh thành GiaNhap để khớp với Database
+            string sqlCTPN = "SELECT Sach.TenSach, ChiTietPN.SLnhap, ChiTietPN.GiaThanh, ChiTietPN.ThanhTien FROM ChiTietPN " +
+                              "INNER JOIN PhieuNhap ON ChiTietPN.MaPN = PhieuNhap.MaPN " +
+                              "INNER JOIN Sach ON ChiTietPN.MaSach = Sach.MaSach WHERE PhieuNhap.MaPN = N'" + mpn + "'";
+
+            // Gọi hàm in và lấy tọa độ Y cuối cùng
+            int buocnhay = DataProvider.Instance.PrintData(sqlCTPN, e, "Phiếu Nhập", 0);
+
+            // 6. In Tổng tiền (Dưới danh sách mặt hàng)
+            // Nếu danh sách trống (buocnhay == 0), dùng tọa độ mặc định 500 + 50
+            int yFinal = (buocnhay > 0) ? buocnhay + 50 : 550;
+
+            DataProvider.Instance.PrintData("SELECT TongTien FROM PhieuNhap WHERE MaPN = N'" + mpn + "'", e, "None", yFinal);
         }
     }
 }

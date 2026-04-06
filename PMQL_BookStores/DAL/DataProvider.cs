@@ -28,7 +28,7 @@ namespace PMQL_BookStores.DAL
 
         public DataProvider() { }
 
-        public string Conn = "Data Source=LAPTOP-60SQJEQ9\\SQLEXPRESS;Initial Catalog=BookStores;Integrated Security=True"; // Chuỗi kết nối database
+        public string Conn = "Data Source=.\\SQLEXPRESS;Initial Catalog=BookStores;Integrated Security=True"; // Chuỗi kết nối database
 
         public DataTable DataAccess(string query) // Hàm hiển thị dữ liệu lên datagridview
         {

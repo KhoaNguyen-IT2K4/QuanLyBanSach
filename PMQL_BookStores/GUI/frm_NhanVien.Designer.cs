@@ -272,11 +272,10 @@
             this.dtpNgaySinhNV.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.2F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.dtpNgaySinhNV.Format = System.Windows.Forms.DateTimePickerFormat.Custom;
             this.dtpNgaySinhNV.Location = new System.Drawing.Point(522, 45);
-            this.dtpNgaySinhNV.MaxDate = new System.DateTime(2024, 12, 31, 0, 0, 0, 0);
-            this.dtpNgaySinhNV.MinDate = new System.DateTime(2000, 1, 1, 0, 0, 0, 0);
             this.dtpNgaySinhNV.Name = "dtpNgaySinhNV";
             this.dtpNgaySinhNV.Size = new System.Drawing.Size(180, 27);
             this.dtpNgaySinhNV.TabIndex = 9;
+            this.dtpNgaySinhNV.Value = new System.DateTime(2024, 12, 31, 0, 0, 0, 0);
             // 
             // lblNgaySinhNV
             // 
